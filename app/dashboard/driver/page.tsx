@@ -29,7 +29,7 @@ const mockApi = {
         pickupDate: "Mar 5, 2025",
         deliveryDate: "Mar 6, 2025",
         company: "ABC Distributors",
-        isPerishable: true,
+        isPerishable: false,
         expiryDate: "Mar 10, 2025",
       },
       {
