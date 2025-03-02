@@ -29,6 +29,8 @@ const mockApi = {
         pickupDate: "Mar 5, 2025",
         deliveryDate: "Mar 6, 2025",
         company: "ABC Distributors",
+        isPerishable: true,
+        expiryDate: "Mar 10, 2025",
       },
       {
         id: "LD-5678",
@@ -41,6 +43,8 @@ const mockApi = {
         pickupDate: "Mar 4, 2025",
         deliveryDate: "Mar 4, 2025",
         company: "Fresh Foods Inc.",
+        isPerishable: true,
+        expiryDate: "Mar 7, 2025",
       },
       // ... other loads
     ]
@@ -61,6 +65,8 @@ const mockApi = {
         deliveryDate: "Mar 3, 2025",
         status: "In Transit",
         company: "Desert Shipping Co.",
+        isPerishable: false,
+        expiryDate: null,
       },
     ]
   },
@@ -88,6 +94,7 @@ export default function DriverDashboard() {
   const [loads, setLoads] = useState([])
   const [activeLoads, setActiveLoads] = useState([])
   const [stats, setStats] = useState({ weeklyEarnings: 0, totalMiles: 0 })
+  const [activeTab, setActiveTab] = useState("available")
 
   useEffect(() => {
     // Fetch available loads
@@ -101,10 +108,15 @@ export default function DriverDashboard() {
   const acceptLoad = async (loadId: string) => {
     try {
       await mockApi.acceptLoad(loadId)
-      // Refresh available and active loads
-      const [newAvailable, newActive] = await Promise.all([mockApi.getAvailableLoads(), mockApi.getActiveLoads()])
-      setLoads(newAvailable)
-      setActiveLoads(newActive)
+      // Move the accepted load from available to active
+      const acceptedLoad = loads.find((load) => load.id === loadId)
+      if (acceptedLoad) {
+        setActiveLoads([...activeLoads, { ...acceptedLoad, status: "In Transit" }])
+        setLoads(loads.filter((load) => load.id !== loadId))
+      }
+      // Refresh driver stats
+      const newStats = await mockApi.getDriverStats()
+      setStats(newStats)
     } catch (error) {
       console.error("Failed to accept load:", error)
       // Handle error (e.g., show error message to user)
@@ -114,9 +126,8 @@ export default function DriverDashboard() {
   const markAsDelivered = async (loadId: string) => {
     try {
       await mockApi.markAsDelivered(loadId)
-      // Refresh active loads
-      const newActive = await mockApi.getActiveLoads()
-      setActiveLoads(newActive)
+      // Remove the delivered load from active loads
+      setActiveLoads(activeLoads.filter((load) => load.id !== loadId))
       // Refresh driver stats
       const newStats = await mockApi.getDriverStats()
       setStats(newStats)
@@ -186,7 +197,7 @@ export default function DriverDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="available" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="available" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
@@ -278,6 +289,22 @@ export default function DriverDashboard() {
                         </div>
                         <div className="text-sm font-bold">{load.rate}</div>
                       </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="flex items-center gap-1 text-sm">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Perishable:</span>
+                        </div>
+                        <div className="text-sm">{load.isPerishable ? "Yes" : "No"}</div>
+                      </div>
+                      {load.isPerishable && (
+                        <div className="grid grid-cols-2 gap-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">Expiry Date:</span>
+                          </div>
+                          <div className="text-sm">{load.expiryDate}</div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                   <CardFooter className="pt-2">
@@ -299,7 +326,7 @@ export default function DriverDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardFooter>
-                  <Button variant="outline" onClick={() => document.querySelector('[value="available"]')?.click()}>
+                  <Button variant="outline" onClick={() => setActiveTab("available")}>
                     Browse Available Loads
                   </Button>
                 </CardFooter>
@@ -359,6 +386,22 @@ export default function DriverDashboard() {
                           </div>
                           <div className="text-sm font-bold">{load.rate}</div>
                         </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">Perishable:</span>
+                          </div>
+                          <div className="text-sm">{load.isPerishable ? "Yes" : "No"}</div>
+                        </div>
+                        {load.isPerishable && (
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">Expiry Date:</span>
+                            </div>
+                            <div className="text-sm">{load.expiryDate}</div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                     <CardFooter className="pt-2">
@@ -377,4 +420,5 @@ export default function DriverDashboard() {
     </DashboardLayout>
   )
 }
+
 
